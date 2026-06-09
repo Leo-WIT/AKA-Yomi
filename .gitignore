@@ -68,6 +68,10 @@ logs/
 AKA-Yomi.exe
 *.exe
 
+# Allow releases directory
+!releases/
+!releases/*.exe
+
 # OS files
 .DS_Store
 Thumbs.db
