@@ -4,7 +4,18 @@
 
 <br>
 
-![AKA-Yomi Screenshot](AKA-Yomi.png)
+<p>
+  <img src="AKA-Yomi.png" alt="AKA-Yomi main interface" width="45%">
+  <img src="AKA-Yomi-1.png" alt="AKA-Yomi screenshot 1" width="45%">
+</p>
+<p>
+  <img src="AKA-Yomi-2.png" alt="AKA-Yomi screenshot 2" width="45%">
+  <img src="AKA-Yomi-3.png" alt="AKA-Yomi screenshot 3" width="45%">
+</p>
+<p>
+  <img src="AKA-Yomi-4.png" alt="AKA-Yomi screenshot 4" width="45%">
+  <img src="AKA-Yomi-5.png" alt="AKA-Yomi screenshot 5" width="45%">
+</p>
 
 <br>
 
