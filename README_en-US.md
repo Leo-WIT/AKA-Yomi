@@ -27,6 +27,8 @@ Features: Record user's mouse and keyboard operations, automatically execute pre
 
 Usage: When performing simple, monotonous, and repetitive tasks, this software can save you a lot of effort. Just do it once yourself, and then let the computer handle the rest.
 
+> **Development Note**: The author has no coding background. This project was developed through secondary development using [TRAE SOLO](https://www.trae.ai/), with all modifications completed through pure Chinese communication.
+
 ## Key Features
 
 - 🌍 **Multi-language Support**: 简体中文 / English / 繁體中文
