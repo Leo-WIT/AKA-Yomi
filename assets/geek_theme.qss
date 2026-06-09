@@ -1,0 +1,290 @@
+/* ========== Geek Theme ========== */
+/* Neon cyberpunk style with dark background and green glow */
+
+/* --- Global --- */
+QWidget {
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 13px;
+    color: #39ff14;
+}
+
+QMainWindow {
+    background-color: #0a0a0a;
+}
+
+/* --- GroupBox --- */
+QGroupBox {
+    font-weight: 700;
+    color: #39ff14;
+    border: 2px solid #39ff14;
+    border-radius: 0px;
+    margin-top: 20px;
+    padding-top: 24px;
+    background-color: #0a0a0a;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 16px;
+    padding: 0 8px;
+    background-color: #0a0a0a;
+}
+
+/* --- Label --- */
+QLabel {
+    color: #39ff14;
+    font-weight: 500;
+}
+
+/* --- PushButton --- */
+QPushButton {
+    background-color: #0a0a0a;
+    color: #39ff14;
+    border: 2px solid #39ff14;
+    border-radius: 0px;
+    padding: 4px 16px;
+    font-weight: 700;
+    min-height: 20px;
+    min-width: 80px;
+    font-family: "Consolas", "Courier New", monospace;
+}
+
+QPushButton:hover {
+    background-color: #39ff14;
+    color: #0a0a0a;
+    border-color: #39ff14;
+}
+
+QPushButton:pressed {
+    background-color: #2dd90f;
+    color: #0a0a0a;
+    border-color: #2dd90f;
+}
+
+QPushButton:disabled {
+    background-color: #1a1a1a;
+    color: #1a5c0f;
+    border-color: #1a5c0f;
+}
+
+/* --- Control Buttons --- */
+QPushButton[class="btn-success"] {
+    background-color: #0a0a0a;
+    border-color: #39ff14;
+    color: #39ff14;
+}
+QPushButton[class="btn-success"]:hover {
+    background-color: #39ff14;
+    color: #0a0a0a;
+}
+QPushButton[class="btn-info"] {
+    background-color: #0a0a0a;
+    border-color: #00ff88;
+    color: #00ff88;
+}
+QPushButton[class="btn-info"]:hover {
+    background-color: #00ff88;
+    color: #0a0a0a;
+}
+QPushButton[class="btn-warning"] {
+    background-color: #0a0a0a;
+    border-color: #ffaa00;
+    color: #ffaa00;
+}
+QPushButton[class="btn-warning"]:hover {
+    background-color: #ffaa00;
+    color: #0a0a0a;
+}
+
+/* --- Default Button --- */
+QPushButton[cssClass="default"] {
+    background-color: #0a0a0a;
+    color: #39ff14;
+    border: 2px solid #39ff14;
+}
+
+/* --- ComboBox --- */
+QComboBox {
+    background-color: #0a0a0a;
+    border: 2px solid #39ff14;
+    border-radius: 0px;
+    padding: 2px 8px;
+    min-height: 20px;
+    color: #39ff14;
+    font-weight: 500;
+    font-family: "Consolas", "Courier New", monospace;
+}
+
+QComboBox:hover {
+    border-color: #5cff3f;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 20px;
+    border-left: 2px solid #39ff14;
+    background-color: #0a0a0a;
+}
+
+QComboBox::drop-down:hover {
+    background-color: #39ff14;
+}
+
+QComboBox::down-arrow {
+    image: url(:/pic/arrow_down_white.svg);
+    width: 10px;
+    height: 6px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #0a0a0a;
+    border: 2px solid #39ff14;
+    border-radius: 0px;
+    selection-background-color: #39ff14;
+    selection-color: #0a0a0a;
+    outline: none;
+    padding: 4px;
+}
+
+QComboBox QAbstractItemView::item {
+    padding: 6px 16px;
+    border-radius: 0px;
+    min-height: 24px;
+    color: #39ff14;
+}
+
+QComboBox QAbstractItemView::item:hover {
+    background-color: #1a5c0f;
+}
+
+QComboBox QAbstractItemView::item:selected {
+    background-color: #39ff14;
+    color: #0a0a0a;
+    font-weight: 700;
+}
+
+/* --- SpinBox --- */
+QSpinBox, QDoubleSpinBox {
+    background-color: #0a0a0a;
+    border: 2px solid #39ff14;
+    border-radius: 0px;
+    padding: 2px 8px;
+    min-height: 20px;
+    color: #39ff14;
+    font-weight: 500;
+    font-family: "Consolas", "Courier New", monospace;
+}
+
+QSpinBox:hover, QDoubleSpinBox:hover {
+    border-color: #5cff3f;
+}
+
+QSpinBox::up-button, QDoubleSpinBox::up-button {
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    width: 16px;
+    border-left: 2px solid #39ff14;
+    background-color: #0a0a0a;
+}
+
+QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover {
+    background-color: #39ff14;
+}
+
+QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {
+    image: url(:/pic/arrow_up_white.svg);
+    width: 8px;
+    height: 5px;
+}
+
+QSpinBox::down-button, QDoubleSpinBox::down-button {
+    subcontrol-origin: border;
+    subcontrol-position: bottom right;
+    width: 16px;
+    border-left: 2px solid #39ff14;
+    background-color: #0a0a0a;
+}
+
+QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover {
+    background-color: #39ff14;
+}
+
+QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
+    image: url(:/pic/arrow_down_white.svg);
+    width: 8px;
+    height: 5px;
+}
+
+/* --- TextEdit / Log --- */
+QTextEdit {
+    background-color: #050505;
+    color: #39ff14;
+    border: 2px solid #39ff14;
+    border-radius: 0px;
+    padding: 10px;
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 12px;
+    selection-background-color: #39ff14;
+    selection-color: #0a0a0a;
+}
+
+QTextEdit:focus {
+    border-color: #5cff3f;
+}
+
+/* --- CheckBox --- */
+QCheckBox {
+    color: #39ff14;
+    font-weight: 500;
+    spacing: 6px;
+}
+
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #39ff14;
+    border-radius: 0px;
+    background-color: #0a0a0a;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #39ff14;
+    border-color: #39ff14;
+}
+
+QCheckBox::indicator:hover {
+    border-color: #5cff3f;
+}
+
+/* --- ScrollBar --- */
+QScrollBar:vertical {
+    background-color: #0a0a0a;
+    width: 10px;
+    border: 1px solid #39ff14;
+}
+
+QScrollBar::handle:vertical {
+    background-color: #39ff14;
+    min-height: 20px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background-color: #5cff3f;
+}
+
+QScrollBar:horizontal {
+    background-color: #0a0a0a;
+    height: 10px;
+    border: 1px solid #39ff14;
+}
+
+QScrollBar::handle:horizontal {
+    background-color: #39ff14;
+    min-width: 20px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background-color: #5cff3f;
+}
