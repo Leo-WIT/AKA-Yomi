@@ -4,6 +4,10 @@
 
 <br>
 
+![AKA-Yomi Screenshot](AKA-Yomi.png)
+
+<br>
+
 <div>
     <img alt="platform" src="https://img.shields.io/badge/platform-Windows-blueviolet">
     <img alt="license" src="https://img.shields.io/github/license/Leo-WIT/AKA-Yomi">
