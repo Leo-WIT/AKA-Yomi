@@ -13,7 +13,7 @@ import Recorder
 
 from PySide6.QtGui import QTextCursor
 from PySide6.QtCore import *
-from PySide6.QtWidgets import QMainWindow, QApplication, QMessageBox, QInputDialog, QPushButton, QComboBox, QSpinBox, QDoubleSpinBox
+from PySide6.QtWidgets import QMainWindow, QApplication, QMessageBox, QInputDialog, QPushButton, QComboBox, QSpinBox, QDoubleSpinBox, QFileDialog
 from loguru import logger
 
 from Event import ScriptEvent, flag_multiplemonitor
@@ -117,27 +117,46 @@ class UIFunc(QMainWindow, Ui_UIView):
         current_lang = self.choice_language.currentText()
         self._update_theme_display_names(current_lang)
 
-        # 获取默认的地区设置并应用翻译
-        language = '简体中文' if locale.getdefaultlocale()[0] == 'zh_CN' else 'English'
+        # 优先使用已保存的语言设置，没有配置时再使用系统默认语言
+        saved_language = self.config.value("Config/Language", None)
+        if saved_language in ['简体中文', 'English', '繁體中文']:
+            language = saved_language
+        else:
+            language = '简体中文' if locale.getdefaultlocale()[0] == 'zh_CN' else 'English'
         self.choice_language.setCurrentText(language)
         self.onchangelang()
 
         get_script_list_from_dir()
         update_script_map()
         self.scripts = scripts
-        self.choice_script.addItems(self.scripts)
-        if self.scripts:
-            self.choice_script.setCurrentIndex(0)
-        else:
-            self.btrun.setEnabled(False)
+        self._reload_script_combo()
 
         PluginManager.reload()
 
         # Config
         self.stimes.setValue(int(self.config.value("Config/LoopTimes")))
         self.mouse_move_interval_ms.setValue(int(self.config.value("Config/Precision")))
-        if self.config.value('Config/Script') is not None and self.config.value('Config/Script') in self.scripts:
-            self.choice_script.setCurrentText(self.config.value('Config/Script'))
+        self.pre_delay_spin.setValue(int(self.config.value("Config/PreDelay", 5)))
+        self.pre_random_chk.setChecked(self._config_bool("Config/PreDelayRandom", False))
+        self.pre_random_min.setValue(int(self.config.value("Config/PreDelayRandomMin", 1)))
+        self.pre_random_max.setValue(int(self.config.value("Config/PreDelayRandomMax", 5)))
+        self.post_delay_spin.setValue(int(self.config.value("Config/PostDelay", 10)))
+        self.post_random_chk.setChecked(self._config_bool("Config/PostDelayRandom", False))
+        self.post_random_min.setValue(int(self.config.value("Config/PostDelayRandomMin", 1)))
+        self.post_random_max.setValue(int(self.config.value("Config/PostDelayRandomMax", 5)))
+        self.exec_speed_spin.setValue(float(self.config.value("Config/ExecSpeed", 1.0)))
+        self.chk_block_mouse.setChecked(self._config_bool("Config/BlockMouse", False))
+        self.chk_block_keyboard.setChecked(self._config_bool("Config/BlockKeyboard", False))
+        self.OnPreRandomChanged(self.pre_random_chk.checkState())
+        self.OnPostRandomChanged(self.post_random_chk.checkState())
+        saved_script_path = self.config.value('Config/ScriptPath', '')
+        saved_script_name = self.config.value('Config/Script', '')
+        if saved_script_path and os.path.exists(saved_script_path):
+            self._add_script_to_combo(saved_script_path, select=True)
+        elif saved_script_name and saved_script_name in self.scripts:
+            self.choice_script.setCurrentText(saved_script_name)
+        if self.choice_script.count() <= 0:
+            self.btrun.setEnabled(False)
         self.stimes.valueChanged.connect(self.onconfigchange)
 
         # Quick loop buttons
@@ -166,6 +185,23 @@ class UIFunc(QMainWindow, Ui_UIView):
         self.btn_prec_500.clicked.connect(lambda: self._set_precision(500))
 
         self.choice_script.currentTextChanged.connect(self.onconfigchange)
+        for spin in [
+            self.pre_delay_spin,
+            self.pre_random_min,
+            self.pre_random_max,
+            self.post_delay_spin,
+            self.post_random_min,
+            self.post_random_max,
+            self.exec_speed_spin,
+        ]:
+            spin.valueChanged.connect(self.onconfigchange)
+        for checkbox in [
+            self.pre_random_chk,
+            self.post_random_chk,
+            self.chk_block_mouse,
+            self.chk_block_keyboard,
+        ]:
+            checkbox.stateChanged.connect(self.onconfigchange)
         self.hotkey_stop.setText(self.config.value("Config/StopHotKey"))
         self.hotkey_start.setText(self.config.value("Config/StartHotKey"))
         self.hotkey_record.setText(self.config.value("Config/RecordHotKey"))
@@ -183,16 +219,19 @@ class UIFunc(QMainWindow, Ui_UIView):
         self.btrecord.clicked.connect(self.OnBtrecordButton)
         self.btpauserecord.clicked.connect(self.OnPauseRecordButton)
         self.btstop.clicked.connect(self.OnBtStopButton)
+        self.bt_select_script.clicked.connect(self.OnBtSelectScriptButton)
         self.bt_choice_file.clicked.connect(self.OnBtOpenScriptFilesButton)
         self.bt_edit_file.clicked.connect(self.OnBtEditFileButton)
         self.bt_rename_file.clicked.connect(self.OnBtRenameFileButton)
         self.bt_clear_files.clicked.connect(self.OnBtClearFilesButton)
+        self.bt_default_config.clicked.connect(self.OnBtDefaultConfig)
         self.choice_language.installEventFilter(self)
         self.choice_script.installEventFilter(self)
         self.btrun.installEventFilter(self)
         self.btrecord.installEventFilter(self)
         self.btpauserecord.installEventFilter(self)
         self.btstop.installEventFilter(self)
+        self.bt_select_script.installEventFilter(self)
         self.bt_choice_file.installEventFilter(self)
 
         # 组合键缓冲池，[ctrl,shift,alt,cmd/start/win]可用作组合键，但不能单独用作启动热键
@@ -341,11 +380,25 @@ class UIFunc(QMainWindow, Ui_UIView):
     def onconfigchange(self):
         self.config.setValue("Config/LoopTimes", self.stimes.value())
         self.config.setValue("Config/Precision", self.mouse_move_interval_ms.value())
-        self.config.setValue("Config/Theme", self.choice_theme.currentText())
+        self.config.setValue("Config/PreDelay", self.pre_delay_spin.value())
+        self.config.setValue("Config/PreDelayRandom", self.pre_random_chk.isChecked())
+        self.config.setValue("Config/PreDelayRandomMin", self.pre_random_min.value())
+        self.config.setValue("Config/PreDelayRandomMax", self.pre_random_max.value())
+        self.config.setValue("Config/PostDelay", self.post_delay_spin.value())
+        self.config.setValue("Config/PostDelayRandom", self.post_random_chk.isChecked())
+        self.config.setValue("Config/PostDelayRandomMin", self.post_random_min.value())
+        self.config.setValue("Config/PostDelayRandomMax", self.post_random_max.value())
+        self.config.setValue("Config/ExecSpeed", self.exec_speed_spin.value())
+        self.config.setValue("Config/BlockMouse", self.chk_block_mouse.isChecked())
+        self.config.setValue("Config/BlockKeyboard", self.chk_block_keyboard.isChecked())
+        theme_key = self.choice_theme.itemData(self.choice_theme.currentIndex()) or self.choice_theme.currentText()
+        self.config.setValue("Config/Theme", theme_key)
         self.config.setValue("Config/Script", self.choice_script.currentText())
+        self.config.setValue("Config/ScriptPath", self.get_script_path())
         self.config.setValue("Config/StartHotKey", self.hotkey_start.text())
         self.config.setValue("Config/StopHotKey", self.hotkey_stop.text())
         self.config.setValue("Config/RecordHotKey", self.hotkey_record.text())
+        self.config.sync()
 
     def _set_loop_times(self, value):
         self.stimes.setValue(value)
@@ -354,6 +407,12 @@ class UIFunc(QMainWindow, Ui_UIView):
     def _set_precision(self, value):
         self.mouse_move_interval_ms.setValue(value)
         self.onconfigchange()
+
+    def _config_bool(self, key, default=False):
+        value = self.config.value(key, default)
+        if isinstance(value, bool):
+            return value
+        return str(value).lower() in ('1', 'true', 'yes', 'on')
 
     def onchangelang(self):
         global scripts_map
@@ -370,6 +429,9 @@ class UIFunc(QMainWindow, Ui_UIView):
         self.hotkey_start.setText(self._format_hotkey_display(self.config.value("Config/StartHotKey")))
         self.hotkey_record.setText(self._format_hotkey_display(self.config.value("Config/RecordHotKey")))
         self.config.setValue("Config/Language", lang)
+        runthread = getattr(self, 'runthread', None)
+        if runthread:
+            runthread.update_language(lang)
 
         # Restore hard-coded texts
         self.btn_loop_88.setText("88")
@@ -395,7 +457,8 @@ class UIFunc(QMainWindow, Ui_UIView):
         # Label and Button texts (use setText)
         texts = {
             'label_script': {'简体中文': '脚本', 'English': 'Script', '繁體中文': '腳本'},
-            'bt_choice_file': {'简体中文': '选择文件', 'English': 'Select File', '繁體中文': '選擇檔案'},
+            'bt_select_script': {'简体中文': '选择脚本', 'English': 'Select Script', '繁體中文': '選擇腳本'},
+            'bt_choice_file': {'简体中文': '默认路径', 'English': 'Default Path', '繁體中文': '預設路徑'},
             'bt_edit_file': {'简体中文': '编辑文件', 'English': 'Edit File', '繁體中文': '編輯檔案'},
             'bt_rename_file': {'简体中文': '重命名', 'English': 'Rename', '繁體中文': '重新命名'},
             'bt_clear_files': {'简体中文': '清除脚本', 'English': 'Clear Scripts', '繁體中文': '清除腳本'},
@@ -417,6 +480,7 @@ class UIFunc(QMainWindow, Ui_UIView):
             'label_block_options': {'简体中文': '屏蔽选项', 'English': 'Block Options', '繁體中文': '遮蔽選項'},
             'label_block_mouse': {'简体中文': '鼠标', 'English': 'Mouse', '繁體中文': '滑鼠'},
             'label_block_keyboard': {'简体中文': '键盘', 'English': 'Keyboard', '繁體中文': '鍵盤'},
+            'bt_default_config': {'简体中文': '默认配置', 'English': 'Default Config', '繁體中文': '預設配置'},
             'tnumrd': {'简体中文': '完成', 'English': 'Finished', '繁體中文': '完成'},
         }
         
@@ -431,6 +495,8 @@ class UIFunc(QMainWindow, Ui_UIView):
         for attr_name, lang_texts in texts.items():
             widget = getattr(self, attr_name, None)
             if widget is not None and lang in lang_texts:
+                if attr_name == 'tnumrd' and self.state != State.IDLE:
+                    continue
                 widget.setText(lang_texts[lang])
         
         # Handle multiple widgets with same text
@@ -468,6 +534,17 @@ class UIFunc(QMainWindow, Ui_UIView):
                         'RecordHotKey=F10\n'
                         'LoopTimes=1\n'
                         'Precision=200\n'
+                        'PreDelay=5\n'
+                        'PreDelayRandom=false\n'
+                        'PreDelayRandomMin=1\n'
+                        'PreDelayRandomMax=5\n'
+                        'PostDelay=10\n'
+                        'PostDelayRandom=false\n'
+                        'PostDelayRandomMin=1\n'
+                        'PostDelayRandomMax=5\n'
+                        'ExecSpeed=1.0\n'
+                        'BlockMouse=false\n'
+                        'BlockKeyboard=false\n'
                         'Language=zh-cn\n'
                         'Theme=Default\n')
         return QSettings(to_abs_path('config.ini'), QSettings.IniFormat)
@@ -531,10 +608,39 @@ class UIFunc(QMainWindow, Ui_UIView):
         i = self.choice_script.currentIndex()
         if i < 0:
             return ''
-        script = self.scripts[i]
-        path = os.path.join(to_abs_path('scripts'), script)
+        path = self.choice_script.itemData(i)
+        if not path:
+            script = self.choice_script.currentText()
+            path = os.path.join(to_abs_path('scripts'), script)
         logger.info('Script path: {0}'.format(path))
         return path
+
+    def _reload_script_combo(self):
+        current_path = self.get_script_path() if hasattr(self, 'choice_script') else ''
+        self.choice_script.blockSignals(True)
+        self.choice_script.clear()
+        for script in self.scripts:
+            self.choice_script.addItem(script, os.path.join(to_abs_path('scripts'), script))
+        if current_path and os.path.exists(current_path):
+            self._add_script_to_combo(current_path, select=True, block_signals=True)
+        self.choice_script.blockSignals(False)
+
+    def _add_script_to_combo(self, script_path, select=True, block_signals=False):
+        script_path = os.path.abspath(script_path)
+        display_name = os.path.basename(script_path)
+        for i in range(self.choice_script.count()):
+            if os.path.abspath(str(self.choice_script.itemData(i))) == script_path:
+                if select:
+                    self.choice_script.setCurrentIndex(i)
+                return
+        if block_signals:
+            self.choice_script.blockSignals(True)
+        self.choice_script.addItem(display_name, script_path)
+        if select:
+            self.choice_script.setCurrentIndex(self.choice_script.count() - 1)
+            self.btrun.setEnabled(True)
+        if block_signals:
+            self.choice_script.blockSignals(False)
 
     def new_script_path(self):
         now = datetime.datetime.now()
@@ -543,8 +649,7 @@ class UIFunc(QMainWindow, Ui_UIView):
             script = '%s.json5' % now.strftime('%m%d_%H%M%S')
         self.scripts.insert(0, script)
         update_script_map()
-        self.choice_script.clear()
-        self.choice_script.addItems(self.scripts)
+        self._reload_script_combo()
         self.choice_script.setCurrentIndex(0)
         return self.get_script_path()
 
@@ -577,10 +682,23 @@ class UIFunc(QMainWindow, Ui_UIView):
             os.startfile(scripts_dir)
         else:
             QMessageBox.warning(self, self._tr('提示', 'Tip', '提示'), self._tr('脚本目录不存在', 'Script directory does not exist', '腳本目錄不存在'))
-        # 重新设置的为点击按钮时, 所处的位置
-        self.choice_script.clear()
-        self.choice_script.addItems(scripts)
-        self.choice_script.setCurrentIndex(scripts_map['current_index'])
+        get_script_list_from_dir()
+        update_script_map()
+        self.scripts = scripts
+        self._reload_script_combo()
+
+    def OnBtSelectScriptButton(self):
+        script_path, _ = QFileDialog.getOpenFileName(
+            self,
+            self._tr('选择脚本', 'Select Script', '選擇腳本'),
+            to_abs_path('scripts'),
+            self._tr('脚本文件 (*.txt *.json *.json5);;所有文件 (*)',
+                     'Script Files (*.txt *.json *.json5);;All Files (*)',
+                     '腳本檔案 (*.txt *.json *.json5);;所有檔案 (*)')
+        )
+        if script_path:
+            self._add_script_to_combo(script_path, select=True)
+            self.onconfigchange()
 
     def OnBtEditFileButton(self):
         script_path = self.get_script_path()
@@ -619,10 +737,11 @@ class UIFunc(QMainWindow, Ui_UIView):
             os.rename(script_path, new_path)
             get_script_list_from_dir()
             update_script_map()
-            self.choice_script.clear()
-            self.choice_script.addItems(self.scripts)
-            self.choice_script.setCurrentText(new_name)
+            self.scripts = scripts
+            self._reload_script_combo()
+            self._add_script_to_combo(new_path, select=True)
             self.config.setValue("Config/Script", new_name)
+            self.config.setValue("Config/ScriptPath", new_path)
             logger.info(f'Renamed script: {old_name} -> {new_name}')
 
     def OnBtClearFilesButton(self):
@@ -648,17 +767,49 @@ class UIFunc(QMainWindow, Ui_UIView):
             get_script_list_from_dir()
             update_script_map()
             self.scripts = scripts
-            self.choice_script.clear()
-            self.choice_script.addItems(self.scripts)
+            self._reload_script_combo()
             if self.scripts:
                 self.choice_script.setCurrentIndex(0)
                 self.config.setValue("Config/Script", self.scripts[0])
+                self.config.setValue("Config/ScriptPath", self.get_script_path())
                 self.btrun.setEnabled(True)
             else:
                 self.config.setValue("Config/Script", '')
+                self.config.setValue("Config/ScriptPath", '')
                 self.btrun.setEnabled(False)
             QMessageBox.information(self, self._tr('完成', 'Done', '完成'), self._tr(f'已删除 {count} 个脚本。', f'Deleted {count} scripts.', f'已刪除 {count} 個腳本。'))
             logger.info(f'Deleted {count} scripts')
+
+    def OnBtDefaultConfig(self):
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle(self._tr('确认', 'Confirm', '確認'))
+        msg_box.setText(self._tr('是否恢复为默认配置？', 'Restore default configuration?', '是否恢復為預設配置？'))
+        msg_box.setIcon(QMessageBox.Question)
+        confirm_btn = msg_box.addButton(self._tr('确认', 'Confirm', '確認'), QMessageBox.YesRole)
+        cancel_btn = msg_box.addButton(self._tr('取消', 'Cancel', '取消'), QMessageBox.NoRole)
+        msg_box.setDefaultButton(cancel_btn)
+        msg_box.exec_()
+        if msg_box.clickedButton() != confirm_btn:
+            return
+        self._restore_default_config()
+
+    def _restore_default_config(self):
+        self.stimes.setValue(1)
+        self.mouse_move_interval_ms.setValue(200)
+        self.pre_delay_spin.setValue(5)
+        self.pre_random_chk.setChecked(False)
+        self.pre_random_min.setValue(1)
+        self.pre_random_max.setValue(5)
+        self.post_delay_spin.setValue(10)
+        self.post_random_chk.setChecked(False)
+        self.post_random_min.setValue(1)
+        self.post_random_max.setValue(5)
+        self.exec_speed_spin.setValue(1.0)
+        self.chk_block_mouse.setChecked(False)
+        self.chk_block_keyboard.setChecked(False)
+        self.OnPreRandomChanged(self.pre_random_chk.checkState())
+        self.OnPostRandomChanged(self.post_random_chk.checkState())
+        self.onconfigchange()
 
     def recordMethod(self):
         if self.state == State.RECORDING or self.state == State.PAUSE_RECORDING:

@@ -78,12 +78,23 @@ class Ui_UIView(object):
         self.label_script.setMinimumWidth(60)
         self.gridLayout_4.addWidget(self.label_script, 0, 0, 1, 1)
         
-        # Script dropdown (full width)
+        # Script dropdown with external file selector
+        self.scriptSelectLayout = QHBoxLayout()
+        self.scriptSelectLayout.setSpacing(6)
+
         self.choice_script = QComboBox(self.groupBox_2)
         self.choice_script.setObjectName(u"choice_script")
         sizePolicy.setHeightForWidth(self.choice_script.sizePolicy().hasHeightForWidth())
         self.choice_script.setSizePolicy(sizePolicy)
-        self.gridLayout_4.addWidget(self.choice_script, 0, 1, 1, 1)
+        self.choice_script.setMinimumWidth(220)
+        self.scriptSelectLayout.addWidget(self.choice_script, 1)
+
+        self.bt_select_script = QPushButton(self.groupBox_2)
+        self.bt_select_script.setObjectName(u"bt_select_script")
+        self.bt_select_script.setMinimumWidth(100)
+        self.scriptSelectLayout.addWidget(self.bt_select_script)
+
+        self.gridLayout_4.addLayout(self.scriptSelectLayout, 0, 1, 1, 1)
         
         # Script buttons row
         self.scriptBtnLayout = QHBoxLayout()
@@ -311,6 +322,11 @@ class Ui_UIView(object):
         
         spacer_block = QSpacerItem(20, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self.block_options_layout.addItem(spacer_block)
+
+        self.bt_default_config = QPushButton(self.groupBox_2)
+        self.bt_default_config.setObjectName(u"bt_default_config")
+        self.bt_default_config.setMinimumWidth(100)
+        self.block_options_layout.addWidget(self.bt_default_config)
         
         self.gridLayout_4.addLayout(self.block_options_layout, 9, 1, 1, 1)
         
@@ -490,7 +506,8 @@ class Ui_UIView(object):
         UIView.setWindowTitle(QCoreApplication.translate("UIView", u"AKA-Yomi（Automated Key Action Yield Operation Monitor Input 基于 KeymouseGo v5.2.1）", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("UIView", u"自动化配置", None))
         self.label_script.setText(QCoreApplication.translate("UIView", u"脚本", None))
-        self.bt_choice_file.setText(QCoreApplication.translate("UIView", u"选择文件", None))
+        self.bt_select_script.setText(QCoreApplication.translate("UIView", u"选择脚本", None))
+        self.bt_choice_file.setText(QCoreApplication.translate("UIView", u"默认路径", None))
         self.bt_edit_file.setText(QCoreApplication.translate("UIView", u"编辑文件", None))
         self.bt_rename_file.setText(QCoreApplication.translate("UIView", u"重命名", None))
         self.bt_clear_files.setText(QCoreApplication.translate("UIView", u"清除", None))
@@ -520,5 +537,6 @@ class Ui_UIView(object):
         self.label_block_options.setText(QCoreApplication.translate("UIView", u"屏蔽选项", None))
         self.label_block_mouse.setText(QCoreApplication.translate("UIView", u"鼠标", None))
         self.label_block_keyboard.setText(QCoreApplication.translate("UIView", u"键盘", None))
+        self.bt_default_config.setText(QCoreApplication.translate("UIView", u"默认配置", None))
         self.tnumrd.setText(QCoreApplication.translate("UIView", u"完成", None))
         self.label_cursor_pos.setText(QCoreApplication.translate("UIView", u"光标位置: (0, 0)", None))

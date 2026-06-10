@@ -1,35 +1,90 @@
 import os
 import sys
 import math
+import shutil
+import tempfile
 from PySide6.QtWidgets import QApplication, QWidget, QSpinBox
 from PySide6.QtCore import Qt, Slot, QRect
 
-import UIFunc
-import Recorder
 import argparse
-from Event import ScriptEvent
 from loguru import logger
-
-from Plugin.Manager import PluginManager
-from Util.RunScriptClass import RunScriptCMDClass, StopFlag
 
 
 def get_working_dir():
-    import tempfile
-    work_dir = os.path.join(tempfile.gettempdir(), 'KeymouseGo')
-    if not os.path.exists(work_dir):
-        os.makedirs(work_dir)
+    work_dir = os.path.join(get_documents_dir(), 'AKA-Yomi')
+    old_work_dir = os.path.join(tempfile.gettempdir(), 'KeymouseGo')
+    os.makedirs(work_dir, exist_ok=True)
     for subdir in ['scripts', 'logs', 'plugins']:
         subdir_path = os.path.join(work_dir, subdir)
-        if not os.path.exists(subdir_path):
-            os.makedirs(subdir_path)
+        os.makedirs(subdir_path, exist_ok=True)
+    migrate_old_working_dir(old_work_dir, work_dir)
     return work_dir
 
-def to_abs_path(*args):
-    # 打包模式下，资源文件在 sys._MEIPASS 中
+
+def get_documents_dir():
+    try:
+        import ctypes
+        import uuid
+        from ctypes import wintypes
+
+        class GUID(ctypes.Structure):
+            _fields_ = [
+                ('Data1', ctypes.c_ulong),
+                ('Data2', ctypes.c_ushort),
+                ('Data3', ctypes.c_ushort),
+                ('Data4', ctypes.c_ubyte * 8),
+            ]
+
+        documents_guid = uuid.UUID('{FDD39AD0-238F-46AF-ADB4-6C85480369C7}')
+        fid_documents = GUID.from_buffer_copy(documents_guid.bytes_le)
+        path_ptr = wintypes.LPWSTR()
+        ctypes.windll.shell32.SHGetKnownFolderPath(ctypes.byref(fid_documents), 0, None, ctypes.byref(path_ptr))
+        documents_dir = path_ptr.value
+        ctypes.windll.ole32.CoTaskMemFree(path_ptr)
+        if documents_dir:
+            return documents_dir
+    except Exception:
+        pass
+    return os.path.join(os.path.expanduser('~'), 'Documents')
+
+
+def migrate_old_working_dir(old_work_dir, new_work_dir):
+    if not os.path.isdir(old_work_dir):
+        return
+    for name in ['config.ini', 'scripts', 'logs', 'plugins']:
+        old_path = os.path.join(old_work_dir, name)
+        new_path = os.path.join(new_work_dir, name)
+        if not os.path.exists(old_path):
+            continue
+        if os.path.isdir(new_path) and os.listdir(new_path):
+            continue
+        if os.path.isfile(new_path):
+            continue
+        try:
+            if os.path.isdir(old_path):
+                shutil.copytree(old_path, new_path, dirs_exist_ok=True)
+            else:
+                shutil.copy2(old_path, new_path)
+        except Exception as e:
+            logger.warning(f'Failed to migrate {old_path} to {new_path}: {e}')
+
+
+def get_resource_dir():
     if hasattr(sys, '_MEIPASS'):
-        return os.path.join(sys._MEIPASS, *args)
+        return sys._MEIPASS
+    return os.path.dirname(os.path.realpath(sys.argv[0]))
+
+def to_abs_path(*args):
+    if args and args[0] in ('assets', 'Mondrian.ico', 'Mondrian.png', 'assets.qrc', 'assets_rc.py'):
+        return os.path.join(get_resource_dir(), *args)
     return os.path.join(get_working_dir(), *args)
+
+
+import UIFunc
+import Recorder
+from Event import ScriptEvent
+from Plugin.Manager import PluginManager
+from Util.RunScriptClass import RunScriptCMDClass, StopFlag
 
 
 def resize_layout(ui, ratio_w, ratio_h):

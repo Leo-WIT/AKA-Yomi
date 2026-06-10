@@ -116,16 +116,21 @@ class RunScriptClass(QThread, RunScriptMeta):
         """根据当前语言获取国际化文本。"""
         return self.I18N.get(self.lang, self.I18N['简体中文']).get(key, key)
 
+    @Slot(str)
+    def update_language(self, lang: str):
+        """运行过程中同步界面语言。"""
+        self.lang = lang
+
     def sleep(self, msecs: int):
         RunScriptMeta.sleep(self, msecs)
 
-    def sleep_with_countdown(self, msecs: int, prefix_text: str):
+    def sleep_with_countdown(self, msecs: int, prefix_key: str):
         """带倒计时显示的 sleep，每 100ms 更新一次状态文本。"""
         remaining = msecs
         interval = 100  # 每 100ms 更新一次
         while remaining > 0 and self.state != State.IDLE:
             seconds = remaining / 1000.0
-            countdown_text = f'{prefix_text} {self._tr("delay_countdown")}: {seconds:.1f}s'
+            countdown_text = f'{self._tr(prefix_key)} {self._tr("delay_countdown")}: {seconds:.1f}s'
             self.tnumrdSignal.emit(countdown_text)
             sleep_ms = min(interval, remaining)
             mutex.lock()
@@ -176,8 +181,7 @@ class RunScriptClass(QThread, RunScriptMeta):
     def run_script_from_path(self, script_path: str):
         try:
             script_name = script_path.split('/')[-1].split('\\')[-1]
-            running_text = f'{script_name} {self._tr("running")}..'
-            self.tnumrdSignal.emit(running_text)
+            self.tnumrdSignal.emit(self._running_text(script_name))
             logger.info('%s running..' % script_name)
 
             # 解析脚本，返回事件集合与扩展类对象
@@ -210,10 +214,10 @@ class RunScriptClass(QThread, RunScriptMeta):
                 )
                 if pre_delay_ms > 0:
                     logger.info(f'Pre-run delay: {pre_delay_ms}ms')
-                    self.sleep_with_countdown(pre_delay_ms, self._tr('pre_delay'))
+                    self.sleep_with_countdown(pre_delay_ms, 'pre_delay')
 
                 looptimes_text = f'{self._tr("looptimes")} [{j + 1}/{self.runtimes}]'
-                self.tnumrdSignal.emit(f'{running_text}... {looptimes_text}')
+                self.tnumrdSignal.emit(f'{self._running_text(script_name)}... {looptimes_text}')
                 nointerrupt = nointerrupt and self.run_script_from_objects(head_object)
 
                 # 运行后延迟
@@ -223,7 +227,7 @@ class RunScriptClass(QThread, RunScriptMeta):
                 )
                 if post_delay_ms > 0:
                     logger.info(f'Post-run delay: {post_delay_ms}ms')
-                    self.sleep_with_countdown(post_delay_ms, self._tr('post_delay'))
+                    self.sleep_with_countdown(post_delay_ms, 'post_delay')
 
                 j += 1
             if nointerrupt:
@@ -241,6 +245,9 @@ class RunScriptClass(QThread, RunScriptMeta):
             self.logSignal.emit(self._tr('run_failed'))
         finally:
             self.btnSignal.emit(True)
+
+    def _running_text(self, script_name: str) -> str:
+        return f'{script_name} {self._tr("running")}..'
 
     # 执行集合中的ScriptEvent
     @logger.catch

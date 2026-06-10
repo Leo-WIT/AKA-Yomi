@@ -14,7 +14,7 @@ def _tr(zh, en, tw):
     """Get text based on current language setting."""
     try:
         from PySide6.QtCore import QSettings
-        config = QSettings('config.ini', QSettings.IniFormat)
+        config = QSettings(to_abs_path('config.ini'), QSettings.IniFormat)
         lang = config.value("Config/Language", "简体中文")
     except:
         lang = "简体中文"
